@@ -1,7 +1,8 @@
 # Imports
 from bokeh.plotting import figure
-from bokeh.io import output_notebook, output_file, show, curdoc
-from bokeh.models import GeoJSONDataSource, LinearColorMapper, ColorBar, NumeralTickFormatter, HoverTool, Select, ColumnDataSource
+from bokeh.io import output_notebook, output_file, show, curdoc,save
+from bokeh.models import GeoJSONDataSource, LinearColorMapper, \
+ColorBar, NumeralTickFormatter, HoverTool, Select, ColumnDataSource,WheelZoomTool
 from bokeh.layouts import widgetbox, row,column
 from bokeh.transform import factor_cmap
 from bokeh.palettes import brewer,d3,inferno,viridis,cividis,mpl,Spectral6
@@ -10,157 +11,140 @@ import geopandas as gp
 import pandas as pd
 import json
 
-def vizapp(doc):
-    # Read the new 2019 census
-    latest_census = pd.read_csv('kenya_population_by_sex_and_county.csv')
-    latest_census.head()
+# Read the new 2019 census
+latest_census = pd.read_csv('kenya_population_by_sex_and_county.csv')
+latest_census.head()
 
-    # Read the shapefile
-    shapefile = 'Shapefile/ke_county.shp'
+# Read the shapefile
+shapefile = 'Shapefile/ke_county.shp'
+geofile = gp.read_file(shapefile)
+geofile = geofile.rename(columns={'pop 2009': 'pop2009'})
+geofile = geofile.sort_values(by='gid')
 
-    geofile = gp.read_file(shapefile)
-    geofile = geofile.rename(columns={'pop 2009': 'pop2009'})
-    #print(geofile)
+# Read the csv
+covid_data = pd.read_csv('covid_counties.csv', index_col=False)
 
-    geofile = geofile.sort_values(by='gid')
-    #print(geofile)
+# filter covid numbers
+df_covid = pd.read_csv('corona_ke.csv')
 
-    # Read the csv
-    #covid_data = pd.read_csv('covid_counties.csv', index_col=False)
-    #print(covid_data)
+# create a merged dataframe for the geofile dataframe and covid cases csv
+merged = pd.merge(geofile,df_covid[['county', 'covid_num']], on='county')
 
-    # some data cleaning  and stuff
-    # geofile_col = geofile[['county']]
-    # col_names = ['Counties','Covid_nums']
-    # replace_data = pd.read_csv('covid_counties.csv')
-    # #print(replace_data)
-    # covid_num = replace_data[['CovidCases']]
-    # #print(covid_num)
-    # # print(geofile_col)
-    # #counties.to_csv('covid_counties.csv',index=False)
-    # # dicty = {'counties':geofile_col,'covid_num':covid_num}
-    # # print(dicty)
-    # # counties = pd.DataFrame()
-    # # print(counties)
+# comprehensive data, merge the tables and use a left join to preserve the state of the merged df
+comp_merged = pd.merge(merged,latest_census[['county','Male','Female','Intersex','Total']], on='county',how='left')
 
-    # covid_num.to_csv('covid_count_ke.csv', index=False)
+#comp_merged.dropna
 
-    # csv_input = pd.read_csv('covid_in_ke.csv')
-    # csv_input['covid_num'] = covid_num
-    # csv_input.to_csv('corona_ke.csv', index=False)
+# Read the data to json
+merged_json = json.loads(comp_merged.to_json())
 
-    # filter covid numbers
-    df_covid = pd.read_csv('corona_ke.csv')
+# convert to string like object
+json_data = json.dumps(merged_json)
 
-    # create a merged dataframe for the geofile dataframe and covid cases csv
-    merged = pd.merge(geofile,df_covid[['county', 'covid_num']], on='county')
+# Input GeoJSON source that contains features for plotting
+geosource = GeoJSONDataSource(geojson=json_data) 
 
-    # comprehensive data
-    comp_merged = pd.merge(merged,latest_census[['county','Male','Female','Intersex','Total']], on='county',how='left')
-    #comp_merged.dropna
+# Define a sequential multi-hue color palette.
+palette = viridis(80)
 
-    # write to csv
+# Reverse colour order so that blue is for the highest density
+palette = palette[::-1]
 
-    # Read the data to json
-    merged_json = json.loads(comp_merged.to_json())
+# Add Hover tool
+hover = HoverTool(tooltips = [
+    ('County','@county'),
+    ('COVID-19 CASES','@covid_num'),
+    ('Population 2019','@Total'),
+    ('Male','@Male'),
+    ('Female','@Female'),
+    ('Intersex','@Intersex')
+]
+)
+# add wheel-zoom tool 
+zoom_wheel = WheelZoomTool()
 
-    # convert to string like object
-    json_data = json.dumps(merged_json)
+# Instantiate LinearColorMapper that maps numbers in a range into a sequence of colors
+color_mapper = LinearColorMapper(palette=palette, low = 0, high = 80)
 
+# Define custom tick labels for color bar
+tick_labels  = {
+    '0':'0',
+    '10':'10',
+    '20':'20',
+    '30':'30',
+    '40':'40',
+    '50':'50',
+    '60':'60',
+    '70':'70',
+    '80':'>80'   
+}
 
-    # check dataframe
-    #merged
+# Create the color bar. 
+color_bar = ColorBar(color_mapper=color_mapper, label_standoff=10, width = 500, height = 20, border_line_color=None, location = (0, 0), major_label_overrides = tick_labels, orientation= 'horizontal')
 
-    # Input GeoJSON source that contains features for plotting
-    geosource = GeoJSONDataSource(geojson=json_data) 
+# Create the figure object
+p = figure(title = 'COVID-19 cases per county, Kenya 2020', plot_height= 1500, plot_width= 1200,toolbar_location = 'right')
+p.xgrid.grid_line_color = None
+p.xgrid.grid_line_color = None
+p.sizing_mode ="scale_both"
 
-    # Define a sequential multi-hue color palette.
-    palette = viridis(80)
+# Add patch renderer to figure.
+p.patches('xs', 'ys', source = geosource, fill_color = {
+    'field':'covid_num',
+    'transform': color_mapper},line_color='black',line_width=0.25, fill_alpha = 1
+)
 
-    # Reverse colour order so that blue is for the highest density
-    palette = palette[::-1]
+# Specify the figure of the layout.
+p.add_layout(color_bar, 'below')
 
-    # Add Hover tool
-    hover = HoverTool(tooltips = [
-        ('County','@county'),
-        ('COVID-19 CASES','@covid_num'),
-        ('Population 2019','@Total'),
-        ('Male','@Male'),
-        ('Female','@Female'),
-        ('Intersex','@Intersex')
-    ])
+# Add hover 
+p.add_tools(hover,zoom_wheel)
 
-    # Instantiate LinearColorMapper that maps numbers in a range into a sequence of colors
-    color_mapper = LinearColorMapper(palette=palette, low = 0, high = 80)
+# Initialize document to draw on
 
-    # Define custom tick labels for color bar
-    tick_labels  = {
-        '0':'0',
-        '10':'10',
-        '20':'20',
-        '30':'30',
-        '40':'40',
-        '50':'50',
-        '60':'60',
-        '70':'70',
-        '80':'>80'   
-    }
+curdoc().add_root(p)
 
-    # Create the color bar. 
-    color_bar = ColorBar(color_mapper=color_mapper, label_standoff=10, width = 500, height = 20, border_line_color=None, location = (0, 0), major_label_overrides = tick_labels, orientation= 'horizontal')
+## Display figure inline in the Notebook
+# output_notebook()
 
-    # Create the figure object
-    p = figure(title = 'COVID-19 cases per county, Kenya 2020', plot_height= 1500, plot_width= 1200, toolbar_location = None)
-    p.xgrid.grid_line_color = None
-    p.xgrid.grid_line_color = None
+# save plot to html 
+save(p)
 
-    # Add patch renderer to figure.
-    p.patches('xs', 'ys', source = geosource, fill_color = {
-        'field':'covid_num',
-        'transform': color_mapper},line_color='black',line_width=0.25, fill_alpha = 1
-    )
+# Display figure 
+# show(p)
 
-    # Specify the figure of the layout.
-    p.add_layout(color_bar, 'below')
+# Read the data
+ke_stats = pd.read_csv('covid_ke_stats.csv')
 
-    # Add hover 
-    p.add_tools(hover)
+# Save graph in html
+output_file('kenyan_stats_covid.html')
 
-    # Make acustom layout for the plot
-    layout = column(p)
-    curdoc().add_root(layout)
+# get the column values
+Cases = ke_stats.columns.values
 
-    # Display figure inline in the Notebook
-    output_notebook()
+# get row values
+numbers = list(ke_stats.iloc[0])
 
-    # Display figure 
-    show(layout)
+# Read to a form bokeh understands; to draw plots
+source = ColumnDataSource(data=dict(Cases=Cases, numbers=numbers))
 
+# plot the graph
+p2 = figure(x_range=Cases, plot_height=600, toolbar_location='right', title="COVID-19 CASES as at 17 April 2020", tools='hover', tooltips="@Cases: @numbers")
+p2.vbar(x='Cases', top='numbers',width=1, source=source, legend_field='Cases', line_color='white',fill_color=factor_cmap('Cases', palette=Spectral6, factors=Cases))
 
+p2.xgrid.grid_line_color = None
+p2.y_range.start = 0 
+p2.y_range.end = 11000
+p2.legend.orientation = "vertical"
+p2.legend.location = "top_right"
+p2.sizing_mode ="scale_both"
 
-def cov_plot(bplot):
-    # Read the data
-    ke_stats = pd.read_csv('covid_ke_stats.csv')
-    # Save graph in html
-    output_file('kenyan_stats_covid.html')
-    # get the column values
-    Cases = ke_stats.columns.values
-    # get row values
-    numbers = list(ke_stats.iloc[0])
-    # print(Cases)
-    # print(numbers)
+layout = column(p2)
 
-    source = ColumnDataSource(data=dict(Cases=Cases, numbers=numbers))
+# Initialize document to draw on
+curdoc().add_root(layout)
+#show(layout)
 
-    # plot the graph
-    p = figure(x_range=Cases, plot_height=600, toolbar_location=None, title="COVID-19 CASES as at 17 April 2020", tools='hover', tooltips="@Cases: @numbers")
-    p.vbar(x='Cases', top='numbers',width=1, source=source, legend_field='Cases', line_color='white',fill_color=factor_cmap('Cases', palette=Spectral6, factors=Cases))
-
-    p.xgrid.grid_line_color = None
-    p.y_range.start = 0 
-    p.y_range.end = 11000
-    p.legend.orientation = "vertical"
-    p.legend.location = "top_right"
-
-    bplot.add_root(p)
-show(cov_plot)
+# Create a standalone HTML file with JS code included in 'inline' mode
+output_file('covidke_data.html', title="Covid data Kenya", mode='inline')
+save(p2)

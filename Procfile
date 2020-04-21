@@ -1,0 +1,1 @@
+web: bokeh serve --address=0.0.0.0 --port=$PORT --allow-websocket-origin=covidkeviz.herokuapp.com --use-xheaders vizapp.py
