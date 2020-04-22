@@ -3,7 +3,7 @@ from bokeh.plotting import figure
 from bokeh.io import output_notebook, output_file, show, curdoc,save
 from bokeh.models import GeoJSONDataSource, LinearColorMapper, \
 ColorBar, NumeralTickFormatter, HoverTool, Select, ColumnDataSource,WheelZoomTool
-from bokeh.layouts import widgetbox, row,column
+from bokeh.layouts import layout
 from bokeh.transform import factor_cmap
 from bokeh.palettes import brewer,d3,inferno,viridis,cividis,mpl,Spectral6
 from bokeh.themes import built_in_themes
@@ -107,10 +107,7 @@ curdoc().add_root(p)
 ## Display figure inline in the Notebook
 # output_notebook()
 
-# save plot to html 
-save(p)
-
-# Display figure 
+## Display figure 
 # show(p)
 
 # Read the data
@@ -129,22 +126,21 @@ numbers = list(ke_stats.iloc[0])
 source = ColumnDataSource(data=dict(Cases=Cases, numbers=numbers))
 
 # plot the graph
-p2 = figure(x_range=Cases, plot_height=600, toolbar_location='right', title="COVID-19 CASES as at 17 April 2020", tools='hover', tooltips="@Cases: @numbers")
-p2.vbar(x='Cases', top='numbers',width=1, source=source, legend_field='Cases', line_color='white',fill_color=factor_cmap('Cases', palette=Spectral6, factors=Cases))
+p1 = figure(x_range=Cases, plot_height=600, toolbar_location='right', title="COVID-19 CASES as at 17 April 2020", tools='hover', tooltips="@Cases: @numbers")
+p1.vbar(x='Cases', top='numbers',width=1, source=source, legend_field='Cases', line_color='white',fill_color=factor_cmap('Cases', palette=Spectral6, factors=Cases))
 
-p2.xgrid.grid_line_color = None
-p2.y_range.start = 0 
-p2.y_range.end = 11000
-p2.legend.orientation = "vertical"
-p2.legend.location = "top_right"
-p2.sizing_mode ="scale_both"
+p1.xgrid.grid_line_color = None
+p1.y_range.start = 0 
+p1.y_range.end = 11000
+p1.legend.orientation = "vertical"
+p1.legend.location = "top_right"
+# p1.sizing_mode ="scale_both"
 
-layout = column(p2)
+z = layout([p],[p1])
 
 # Initialize document to draw on
-curdoc().add_root(layout)
-#show(layout)
+curdoc().add_root(z)
 
 # Create a standalone HTML file with JS code included in 'inline' mode
-output_file('covidke_data.html', title="Covid data Kenya", mode='inline')
-save(p2)
+output_file('covidke_data.html', title="COVID-KE data Kenya", mode='inline')
+save(z)
