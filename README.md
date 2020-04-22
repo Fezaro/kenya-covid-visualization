@@ -6,9 +6,9 @@
 ### Hover over the counties to display details for each county.
 ### [Check it out](https://fezaro.github.io/kenya-covid-visualization/covidke_data.html)
 
-Other demographic data includes:
-`-` Population of Kenya from the 2019 Census as per county.
-`-` Reported cases of COVID-19 in each county.
+Other demographic data includes: <br/>
+`-` Population of Kenya from the 2019 Census as per county.<br/>
+`-` Reported cases of COVID-19 in each county.<br/>
 
 Live updates daily, maybe
 
