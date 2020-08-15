@@ -11,8 +11,10 @@ Other demographic data includes: <br/>
 `-` Reported cases of COVID-19 in each county.<br/>
 `-` Bar graph of reported cases <br/>
 `-` Line graph...
-Live updates daily, maybe
+Updates weekly.....maybe
 
 
-**Sources**: Ministry of Health Kenya.
+**Sources**:<br/>
+Ministry of Health Kenya.<br/>
+Daily Nation [Twitter](https://twitter.com/dailynation) updates.<br/>
 
