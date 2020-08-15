@@ -14,6 +14,6 @@ Other demographic data includes: <br/>
 Updates weekly.....maybe
 
 
-**Sources**: Ministry of Health Kenya.
-             Daily Nation [Twitter](https://twitter.com/dailynation) updates.
+**Sources**: Ministry of Health Kenya.<br/>
+             Daily Nation [Twitter](https://twitter.com/dailynation) updates.<br/>
 
